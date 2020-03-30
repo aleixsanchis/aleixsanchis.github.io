@@ -1,0 +1,24 @@
+I"�<p>In this post we will explore how to implement an IR Emitter using a microcontroller, in this case a <a href="https://www.microchip.com/wwwproducts/en/PIC10F322">PIC10F322</a>. I chose this microcontroller because:</p>
+
+<ul>
+  <li>It’s cheap</li>
+  <li>It’s tiny</li>
+  <li>It has a PWM, which will be very useful in creating the carrier signal</li>
+</ul>
+
+<p>After finishing the firmware, I saw that I could have chosen something even smaller but I wanted to err on the safe side. Shipping isn’t free!</p>
+
+<h2 id="nec-protocol">NEC Protocol</h2>
+<figure>
+    <img src="https://techdocs.altium.com/sites/default/files/wiki_attachments/296329/NECMessageFrame.png" alt="A NEC Frame" />
+    <figcaption>A NEC frame, which shows the timings of each fragment.
+&lt;/figure&gt;
+
+## The PIC10F322
+
+This microcontroller contains:
+* 0.896 KB Flash
+* 64 B SRAM
+* 16 MHz Internal Oscillator
+</figcaption></figure>
+:ET
