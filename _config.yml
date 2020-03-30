@@ -1,8 +1,8 @@
 # Site settings
 title_left    : "Home"
 title_right   : "" # default: ""
-description   : "Minimalist Jekyll theme for technical writing blog."
-keywords      : "Jekyll, theme, free, download, SEO, blog, web, minimalist, thinkspace"
+description   : "Welcome to my blog. I hope you find it useful"
+keywords      : "Embedded, electronics, PIC, Atmel, AVR, microcontroller, tutorials, projects, low-level, C"
 url           : https://aleixsanchis.github.io # site url
 baseurl       : "" # apply repo name like "/myproject" if used under gh-pages branch, else (under master branch) just leave empty/blank
 cover         : "" # image uri like logo/cover image for site seo
@@ -31,6 +31,7 @@ author:
   name     : "Aleix Sanchis"
 
 plugins:
+  - jekyll-figure
   - jekyll-sitemap
   - bourbon
   - jekyll-paginate
