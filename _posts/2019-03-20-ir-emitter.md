@@ -16,6 +16,8 @@ After finishing the firmware, I saw that I could have chosen something even smal
 
 This project is meant to be complimentary with an USB IR Receiver which is still a Work in Progress, aimed at controlling my computer from a distance while watching movies; for example to pause it or change the volume.
 
+The full code for this project is available at https://www.github.com/aleixsanchis/PICRemote
+
 ## The NEC Protocol
 
 I decided to implement a standard protocol rather than a homemade one, as a learning exercise. Since I will also be the one implementing the receiver, it really wasn't necessary, however this code can now be easily adapted to interface with a real appliance that uses the same protocol.
@@ -91,3 +93,73 @@ The pins are connected in the following way:
 * RA3 (input) <- Shift Register Serial Output. This pin will read the state of the buttons.
 
 Each button has its corresponding pull-up resistor, so a Low value will mean the button is pressed.
+
+## The Code
+
+#### Device configuration
+
+To configure the device I used the following parameters:
+
+* Internal Oscillator at 8Mhz
+* Watchdog Timer and Brown-out Reset Disabled
+* Low Voltage Programming disabled (more on this now)
+
+The PIC10F322 has 4 GPIO, but RA3, aside from being input-only, also serves as !MCLR. This means that, under "normal" conditions (with Low-Voltage Programming, LVP, enabled), the device would reset when this input is driven Low. To be able to use this pin as an input, LVP must be disabled. Then, to enter programming mode, RA3 needs a high voltage, in the order of 8-12V. For more information about LVP, and how to configure the device, consult the [datasheet](http://ww1.microchip.com/downloads/en/DeviceDoc/40001585D.pdf).
+
+So, my configuration is as follows:
+
+{% highlight c %}
+// CONFIG
+
+#pragma config FOSC = INTOSC    // Oscillator Selection bits->INTOSC oscillator: CLKIN function disabled
+
+#pragma config BOREN = OFF    // Brown-out Reset Enable->Brown-out Reset enabled
+
+#pragma config WDTE = OFF    // Watchdog Timer Enable->WDT disabled
+
+#pragma config PWRTE = OFF    // Power-up Timer Enable bit->PWRT disabled
+
+#pragma config MCLRE = OFF    // MCLR Pin Function Select bit->MCLR pin function is digital input, MCLR internally tied to VDD
+
+#pragma config CP = OFF    // Code Protection bit->Program memory code protection is disabled
+
+#pragma config LVP = OFF    // Low-Voltage Programming Enable->High-voltage on MCLR/VPP must be used for programming
+
+#pragma config WRT = OFF    // Flash Memory Self-Write Protection->Write protection off
+{% endhighlight %}
+
+#### The main loop
+
+In the following code block we see the main loop used in the firmware:
+
+{% highlight c linenos=table %}
+void main(void) {
+    // initialize the device
+    SYSTEM_Initialize();
+
+    while (1) {
+        // LOAD INPUTS TO SHIFT REGISTER
+        SHIFT_REG_SH_NLD = 0;
+        SHIFT_REG_CLK = 0;
+        // SHIFT EACH INPUT ONE BY ONE
+        for (uint8_t i = 0; i < 8; i++) {
+            // CHECK IF ANY INPUT IS PRESSED
+            uint8_t input = SHIFT_REG_INPUT;
+
+            // IF PRESSED (PULLED TO LOW) SEND TO IR EMITTER
+            if (input == LOW) {
+                ir_emit(i);
+            }
+            // ENABLE SHIFTING
+            SHIFT_REG_SH_NLD = 1;
+            // MAKE SURE THE SHIFT IS ENABLED
+            __delay_us(1);
+            // RISE CLK
+            SHIFT_REG_CLK = 1;
+            // MAKE SURE THAT CLK STAYS LOW ENOUGH TIME
+            __delay_us(1);
+            SHIFT_REG_CLK = 0;
+        }
+    }
+}
+{% endhighlight %}

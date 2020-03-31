@@ -17,7 +17,13 @@ postshare_enabled : false
 permalink   : /:year/:title/
 markdown    : kramdown
 highlighter : rouge
-
+markdown: kramdown
+kramdown:
+    input: GFM
+    highlighter: rouge
+    syntax_highlighter_opts:
+        block:
+            line_numbers: true
 source      : ./
 destination : ./_site
 
