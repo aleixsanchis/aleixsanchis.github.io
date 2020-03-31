@@ -35,7 +35,7 @@ In the NEC protocol the messages are encoded as follows:
 
 A NEC transmission begins with a 9ms burst, followed by a pause of 4.5ms. This is immediately followed by the address of the intended receiver, LSB first. After the address, the inverted address is transmitted. For example, if we were transmitting for address 0b0000\_0100, the inverted address would be 0b1111\_1011. This is aimed at increasing the reliability of the protocol; if one value is not the exact inversion of the other, that means there was a transmission error and the message can be discarded.
 
-After the address the actual command is sent, which will be interpreted by the receiver. And finally, followed by the command, the inverted bitwise value of the command will be sent, just like in the address. The frame is ended by sending a final 562.5us pulse burst to signify the end of message transmission.
+After the address the actual command is sent, which will be interpreted by the receiver. And finally, followed by the command, the inverted bitwise value of the command will be sent, just like in the address. The frame is ended by sending a final 562.5µs pulse burst to signify the end of message transmission.
 
 So, all in all, we got:
 
@@ -109,6 +109,7 @@ The PIC10F322 has 4 GPIO, but RA3, aside from being input-only, also serves as !
 So, my configuration is as follows:
 
 {% highlight c %}
+
 // CONFIG
 
 #pragma config FOSC = INTOSC    // Oscillator Selection bits->INTOSC oscillator: CLKIN function disabled
@@ -126,13 +127,36 @@ So, my configuration is as follows:
 #pragma config LVP = OFF    // Low-Voltage Programming Enable->High-voltage on MCLR/VPP must be used for programming
 
 #pragma config WRT = OFF    // Flash Memory Self-Write Protection->Write protection off
+
+// LFIOFR 31.25KHz_osc_not_ready; HFIOFS unstable; HFIOFR 16MHz_osc_not_ready; Oscillator at 8MHz; 
+OSCCON = 0x60;
+
+// Set Port A to low
+LATA = 0x00; 
+
+// We set up RA1 as an input; This pin drives the PWM. If set to input, the pin will be driven low
+// when we want to drive the LED, we simply set it as an output
+TRISA = 0x02; 
+
+// Set PORT A as digital GPIO
+ANSELA = 0x00; 
+
 {% endhighlight %}
 
 #### The main loop
 
 In the following code block we see the main loop used in the firmware:
 
-{% highlight c linenos=table %}
+{% highlight c %}
+
+#define IR_OUTPUT PORTAbits.RA1
+
+#define SHIFT_REG_SH_NLD PORTAbits.RA0
+
+#define SHIFT_REG_CLK PORTAbits.RA2
+
+#define SHIFT_REG_INPUT PORTAbits.RA3
+
 void main(void) {
     // initialize the device
     SYSTEM_Initialize();
@@ -140,7 +164,11 @@ void main(void) {
     while (1) {
         // LOAD INPUTS TO SHIFT REGISTER
         SHIFT_REG_SH_NLD = 0;
+        // Make sure the inputs are loaded
+        __delay_us(1);
         SHIFT_REG_CLK = 0;
+        // ENABLE SHIFTING
+        SHIFT_REG_SH_NLD = 1;
         // SHIFT EACH INPUT ONE BY ONE
         for (uint8_t i = 0; i < 8; i++) {
             // CHECK IF ANY INPUT IS PRESSED
@@ -150,9 +178,6 @@ void main(void) {
             if (input == LOW) {
                 ir_emit(i);
             }
-            // ENABLE SHIFTING
-            SHIFT_REG_SH_NLD = 1;
-            // MAKE SURE THE SHIFT IS ENABLED
             __delay_us(1);
             // RISE CLK
             SHIFT_REG_CLK = 1;
@@ -162,4 +187,24 @@ void main(void) {
         }
     }
 }
+
 {% endhighlight %}
+
+First, we initialize the device as needed (Oscillator, TRISA register, etc.). 
+
+Then, on line 14, we load new values into the shift register by bringing the SH\_NLD pin of the register low. Then we iterate eight times, reading the register output. If any of the buttons are pressed (a low value), we send the value of the pin pressed. Since we are implementing the receiver, we can simply send the index of the button and interpret it on the receiver because we know the mapping. If you were interfacing with a real appliance you would need to find its address and the key codes used and send those instead. After that, we just shift the register rising and lowering the CLK pin of the register.
+
+In the code I wrote delay statements to make sure the timing requirements of the register are met; according to the datasheet they shouldn't be needed, but some caution never hurts.
+
+Know that we've seen how the main program works, let's see how we would implement the transmitter. First, we will set up the PWM module.
+
+#### The PWM module
+
+The desired parameters we want for our PWM signal is:
+
+* 38 KHz frequency / 26.3µs period
+* 50% Duty Cycle
+
+The PIC10F322 Datasheet offers two formulas to determine the period (the inverse of the frequency) and the duty cycle ratio. However, the MPLABX IDE has a tool called [Microchip Code Configurator](https://www.microchip.com/mplab/mplab-code-configurator). This tool allows us to easily configure aspects and peripherals of the device and avoid errors when doing the math. Don't feel bad about using it, it's a great time-saver.
+
+First, we will have to configure the Timer 2, which is the source of the PWM module
