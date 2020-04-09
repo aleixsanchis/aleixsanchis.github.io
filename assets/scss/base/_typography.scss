@@ -17,6 +17,7 @@ h6 {
   line-height: $heading-line-height;
   margin: $small-spacing 0 $small-spacing 0;
   font-weight: 700;
+  color: $base-font-color*0.9
 }
 
 h1 {
@@ -78,7 +79,7 @@ picture {
 blockquote {
   padding: $base-spacing 0 $base-spacing $base-spacing;
   margin: $base-spacing 0;
-  color: $dark-gray-color;
+  color: $base-font-color;
   line-height: 1.8;
   border-left: $small-spacing solid $light-gray-color;
   background-color: lighten($light-gray-color, 15%);

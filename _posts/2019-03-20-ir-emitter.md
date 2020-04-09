@@ -87,7 +87,7 @@ Since I wanted my remote to have eight buttons, a Parallel-In Serial-Out (PISO) 
 
 The pins are connected in the following way:
 
-* RA0 (output) -> Shift Register SH/!LD. This pin controls when the inputs are loaded to the shift register.
+* RA0 (output) -> Shift Register SH/NLD. This pin controls when the inputs are loaded to the shift register.
 * RA1 (output) -> IR LED. This pin is driven by the PWM module.
 * RA2 (output) -> Shift Register CLK. On each rising edge of this signal, the register will shift a new value to its output
 * RA3 (input) <- Shift Register Serial Output. This pin will read the state of the buttons.
@@ -108,26 +108,18 @@ The PIC10F322 has 4 GPIO, but RA3, aside from being input-only, also serves as !
 
 So, my configuration is as follows:
 
-{% highlight c %}
+{% highlight c linenos%}
 
 // CONFIG
 
 #pragma config FOSC = INTOSC    // Oscillator Selection bits->INTOSC oscillator: CLKIN function disabled
-
 #pragma config BOREN = OFF    // Brown-out Reset Enable->Brown-out Reset enabled
-
 #pragma config WDTE = OFF    // Watchdog Timer Enable->WDT disabled
-
 #pragma config PWRTE = OFF    // Power-up Timer Enable bit->PWRT disabled
-
 #pragma config MCLRE = OFF    // MCLR Pin Function Select bit->MCLR pin function is digital input, MCLR internally tied to VDD
-
 #pragma config CP = OFF    // Code Protection bit->Program memory code protection is disabled
-
 #pragma config LVP = OFF    // Low-Voltage Programming Enable->High-voltage on MCLR/VPP must be used for programming
-
 #pragma config WRT = OFF    // Flash Memory Self-Write Protection->Write protection off
-
 // LFIOFR 31.25KHz_osc_not_ready; HFIOFS unstable; HFIOFR 16MHz_osc_not_ready; Oscillator at 8MHz; 
 OSCCON = 0x60;
 
@@ -147,14 +139,11 @@ ANSELA = 0x00;
 
 In the following code block we see the main loop used in the firmware:
 
-{% highlight c %}
+{% highlight c linenos %}
 
 #define IR_OUTPUT PORTAbits.RA1
-
 #define SHIFT_REG_SH_NLD PORTAbits.RA0
-
 #define SHIFT_REG_CLK PORTAbits.RA2
-
 #define SHIFT_REG_INPUT PORTAbits.RA3
 
 void main(void) {
@@ -192,7 +181,7 @@ void main(void) {
 
 First, we initialize the device as needed (Oscillator, TRISA register, etc.). 
 
-Then, on line 14, we load new values into the shift register by bringing the SH\_NLD pin of the register low. Then we iterate eight times, reading the register output. If any of the buttons are pressed (a low value), we send the value of the pin pressed. Since we are implementing the receiver, we can simply send the index of the button and interpret it on the receiver because we know the mapping. If you were interfacing with a real appliance you would need to find its address and the key codes used and send those instead. After that, we just shift the register rising and lowering the CLK pin of the register.
+Then, on line 12, we load new values into the shift register by bringing the SH\_NLD pin of the register low. Then we iterate eight times, reading the register output. If any of the buttons are pressed (a low value), we send the value of the pin pressed. Since we are implementing the receiver, we can simply send the index of the button and interpret it on the receiver because we know the mapping. If you were interfacing with a real appliance you would need to find its address and the key codes used and send those instead. After that, we just shift the register rising and lowering the CLK pin of the register.
 
 In the code I wrote delay statements to make sure the timing requirements of the register are met; according to the datasheet they shouldn't be needed, but some caution never hurts.
 
