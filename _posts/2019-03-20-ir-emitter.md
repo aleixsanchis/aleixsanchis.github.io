@@ -90,7 +90,9 @@ The pins are connected in the following way:
 * RA2 (output) -> Shift Register CLK. On each rising edge of this signal, the register will shift a new value to its output
 * RA3 (input) <- Shift Register Serial Output. This pin will read the state of the buttons.
 
-Each button has its corresponding pull-up resistor, so a Low value will mean the button is pressed.
+Each button has its corresponding pull-up resistor, so a Low value will mean the button is pressed. As always, select a resistor for your LED according to its forward voltage and the desired current. A typical value is fV of around 1.5-1.7V and maximum current when pulsing is 80-100 mA. Because I don't need a big range in my remote, 20 mA (the sink current recommended for the PIC GPIO) should be fine and thus I won't need to drive the LED with a transistor.
+
+The design of the circuit is not final yet, because some decisions are still not taken until I have to build it in a circuit board. I will probably run this circuit off a CR2032 or two AAA batteries in series, and still have not decided if a 3.3V regulator will be used or just connect it straight from the battery.
 
 ## The Code
 
@@ -211,4 +213,101 @@ Then, we configure our PWM module using the Timer 2 as a source, and a duty cycl
 </figure>
 <br>
 
+As we can see, the frequency of our PWM signal will be approximately 37.736 kHz instead of 38. This is a deviation of less than 1% so we should be fine.
+
 And it's just that simple. If it is your first time setting up Timers, it would probably be a good idea to configure them manually by reading the datasheet. However, once you know how it's done, using the MCC saves you from a lot of time and helps you avoid bugs due to wrong calculations.
+
+#### Driving the IR LED
+
+So, now that we have configured the PWM to output our desired carrier signal, we just need to drive the LED and send data according to the NEC protocol. First, we will define two functions to start sending a PWM burst and to stop it.
+
+{% highlight c linenos %}
+static void send_pwm_burst() {
+    TMR2 = 0x00;
+    // PWM IS ENABLED BY SETTING RA1 back to an output
+    TRISAbits.TRISA1 = 0;
+    TMR2_StartTimer();
+}
+
+static void stop_pwm_burst() {
+    TMR2_StopTimer();
+    // BY SETTING RA1 to input, PWM is disabled
+    TRISAbits.TRISA1 = 1;
+}
+{% endhighlight %}
+
+As mentioned in the comments, a trick to easily start and stop the PWM pin is by simply setting the pin as an input. To do this, we simply write 0 (for output) or 1 (for input) in the corresponding bit of the TRISA register
+
+Then, we just need to burst or stop the LED according to the NEC timings. For the header:
+
+{% highlight c linenos %}
+static void nec_send_header() {
+    send_pwm_burst();
+    __delay_us(9000);
+    stop_pwm_burst();
+    __delay_us(4500);
+}
+{% endhighlight %}
+
+We simply burst for 9ms and then stop for 4.5ms. In these routines we used the delay macros provided by the XC8 compiler. The ideal approach would use Timer interrupts instead, so the device could do other tasks meanwhile instead of busy-waiting. However, in our device, there aren't any other tasks to perform, so this approach is fine and simplifies the code.
+
+To send a value, we start sending, from LSB first, each bit. If it's a 1, a 562.5µs burst followed by 1687.5µs pause, or if it's a 0, a 562.5µs burst followed by a 526.2µs pause. This function will work for both sending the NEC address and the command.
+{% highlight c linenos %}
+
+static void nec_send_value(uint8_t value) {
+    for (uint8_t i = 0; i < 8; i++) {
+        if (value & 0x1) {
+            send_pwm_burst();
+            __delay_us(562.5);
+            stop_pwm_burst();
+            __delay_us(1687.5);
+        } else {
+            send_pwm_burst();
+            __delay_us(562.5);
+            stop_pwm_burst();
+            __delay_us(562.5);
+        }
+        value = value >> 1;
+    }
+}
+{% endhighlight %}
+
+Finally, we just need to complete a whole NEC frame: Header, address, bitwise inverse address, command and bitwise inverse command.
+{% highlight c linenos %}
+static void nec_send_frame(uint8_t address, uint8_t command) {
+    // HEADER: 9 mS PULSE
+    nec_send_header();
+    // ADDRESS
+    nec_send_value(address);
+    // !ADDRESS
+    nec_send_value(~address);
+    // COMMAND
+    nec_send_value(command);
+    // !COMMAND
+    nec_send_value(~command);
+    // FINAL PAUSE
+    stop_pwm_burst();
+    __delay_us(562.5);
+}
+
+{% endhighlight %}
+
+So the code to send a NEC frame is finished. Now we just need to implement the public function ir\_emit()
+
+{% highlight c linenos %}
+void ir_emit(uint8_t data) {
+    if (data == last_command_sent) {
+        nec_send_frame(RECEIVER_ADDRESS, data);
+        last_command_sent = data;
+    } else {
+        // TODO SEND REPEAT CODE
+        nec_send_frame(RECEIVER_ADDRESS, data);
+    }
+}
+{% endhighlight %}
+
+The NEC protocol supports sending repeat codes to avoid sending the same command multiple times if the same key is repeatedly pressed. As of now, I have not implemented them, but would be a nice addition in line 7.
+
+And we have finished our firmware. Remember that, if you have any doubt, you can consult the full source code at my [repo](https://www.github.com/aleixsanchis/PICRemote). It's not fully documented but I believe it's quite clean.
+
+I will update this post once I build the final circuit. Meanwhile, thanks for reading.
