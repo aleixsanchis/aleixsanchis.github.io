@@ -12,7 +12,7 @@ In this post we will explore how to implement an IR Emitter using a microcontrol
 * It's tiny
 * It has a PWM module, which will be very useful in creating the carrier signal
 
-After finishing the firmware, I saw that I could have chosen something even smaller but I wanted to err on the safe side. Shipping isn't free! (i actually had a coupon and it was).
+This solution is far from optimal because I frankly didn't do much research beforehand. Since I only have eight buttons, a far easier way to solve this would be to pick a microcontroller with more inputs. Doing this would have reduced the total cost, overall power consumption, and code and circuit size and complexity. I might redo this project in the future, but for now, this is it.
 
 This project is meant to be complimentary with an USB IR Receiver which is still a Work in Progress, aimed at controlling my computer from a distance while watching movies; for example to pause it or change the volume.
 
@@ -70,8 +70,6 @@ This microcontroller contains:
 * 64 B SRAM
 * 16 MHz internal oscillator
 * 4 GPIO (one of them is input only)
-
-More than enough for our project! (Actually I wish I had one extra pin but that's what you get for not doing enough research beforehand).
 
 To program it we will use the MPLABX IDE with the XC8 compiler provided by Microchip. Both are gratis, but not free software and can be downloaded from Microchip's website.
 
@@ -196,4 +194,21 @@ The desired parameters we want for our PWM signal is:
 
 The PIC10F322 Datasheet offers two formulas to determine the period (the inverse of the frequency) and the duty cycle ratio. However, the MPLABX IDE has a tool called [Microchip Code Configurator](https://www.microchip.com/mplab/mplab-code-configurator). This tool allows us to easily configure aspects and peripherals of the device and avoid errors when doing the math. Don't feel bad about using it, it's a great time-saver.
 
-First, we will have to configure the Timer 2, which is the source of the PWM module
+First, we will have to configure the Timer 2, which is the source of the PWM module.
+
+To get the desired Timer2 period, just introduce the value you want in the Timer Period field, in our case 26.3µs.
+
+<figure>
+    <img src="/assets/images/ir_led/tmr2_config.png" alt="Configuration for the Timer2 Using MCC">
+</figure>
+<br>
+
+As we can see, our period won't be exactly 26.3µs, but 26.5µs due to the available resolution. However, this slight difference won't be much of a problem.
+
+Then, we configure our PWM module using the Timer 2 as a source, and a duty cycle of 50%:
+<figure>
+    <img src="/assets/images/ir_led/pwm_config.png" alt="Configuration for the PWM Using MCC">
+</figure>
+<br>
+
+And it's just that simple. If it is your first time setting up Timers, it would probably be a good idea to configure them manually by reading the datasheet. However, once you know how it's done, using the MCC saves you from a lot of time and helps you avoid bugs due to wrong calculations.

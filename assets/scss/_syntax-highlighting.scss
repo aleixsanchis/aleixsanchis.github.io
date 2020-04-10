@@ -29,9 +29,10 @@ $sol-yellow:   #b58900;  // 60  10  65
 $sol-orange:   #cb4b16;  // 50  50  55
 $sol-red:      #dc322f;  // 50  65  45
 $sol-magenta:  #d33682;  // 50  65 -05
-$sol-violet:   #6c71c4;  // 50  15 -45
 $sol-blue:     #268bd2;  // 55 -10 -45
-$sol-cyan:     #2aa198;  // 60 -35 -05
+$sol-violet:   $sol-blue;//#6c71c4;  // 50  15 -45
+$sol-blue:    $sol-yellow;
+$sol-cyan:     #aaff66;  // 60 -35 -05
 $sol-green:    #859900;  // 60 -20  65
 
 $sol-mono3:    $sol-base3;
@@ -59,6 +60,7 @@ $brand-color-dark:      $sol-mono00 !default;
 $text-color:            $sol-mono01 !default;
 $background-color:      $sol-mono3 !default;
 $code-background-color: $sol-mono2 !default;
+$comment-color: #008866;
 
 $link-base-color:       $sol-blue !default;
 $link-visited-color:    mix($sol-blue, $sol-mono00) !default;
@@ -72,11 +74,13 @@ $table-border-color:    $sol-mono1 !default;
 .gutter {
   text-align: right;
 }
+
+
 .highlight {
   margin: $base-spacing 0;
   padding: 0;
   box-shadow: 0px 0px 2px rgba($black-color, .1);
-
+  font-size: 0.8em;
   .highlighter-rouge &, &, .hll, pre, code {
     //background-color: lighten($light-gray-color, 15%) !important;
   }
@@ -105,14 +109,14 @@ $table-border-color:    $sol-mono1 !default;
     }
   }
 
-  .c     { color: $sol-cyan; font-style: italic } // Comment
+  .c     { color: $comment-color; font-style: italic } // Comment
   .err   { color: $sol-red } // Error
   .k     { color: $sol-mono01; font-weight: bold } // Keyword
   .o     { color: $sol-mono01; font-weight: bold } // Operator
-  .cm    { color: $sol-mono1; font-style: italic } // Comment.Multiline
+  .cm    { color: $comment-color; font-style: italic } // Comment.Multiline
   .cp    { color: $sol-mono1; font-weight: bold } // Comment.Preproc
-  .c1    { color: $sol-cyan*0.8; font-style: italic } // Comment.Single
-  .cs    { color: $sol-mono1; font-weight: bold; font-style: italic } // Comment.Special
+  .c1    { color: $comment-color; font-style: italic } // Comment.Single
+  .cs    { color: $comment-color; font-weight: bold; font-style: italic } // Comment.Special
   .gd    { color: $sol-red } // Generic.Deleted
   .gd .x { color: $sol-red } // Generic.Deleted.Specific
   .ge    { color: $sol-mono00; font-style: italic } // Generic.Emph
@@ -164,4 +168,10 @@ $table-border-color:    $sol-mono1 !default;
   .vg    { color: $sol-cyan } // Name.Variable.Global
   .vi    { color: $sol-cyan } // Name.Variable.Instance
   .il    { color: $sol-cyan } // Literal.Number.Integer.Long
+}
+
+@media (max-width: 500px){
+  .highlight {
+    font-size: 0.6em;
+  }
 }
